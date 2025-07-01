@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:14.1-alpine
+    ports:
+      - "55432:5432"
+    environment:
+      POSTGRES_DB: newsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  reporter-service:
+    restart: on-failure
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    command: "dotnet ef database update"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+        ASPNETCORE_URLS: http://+:80
+        POSTGRES_CONNECTION_STRING: Host=postgres;Port=5432;Database=newsdb;Username=postgres;Password=1234
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "7971:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - reporter-service
