@@ -5,3 +5,4 @@ obj/
 *.cache
 coverage-report
 data.csv
+TestResults/
