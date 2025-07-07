@@ -15,6 +15,24 @@ jobs:
     name: Run Unit and Integration Tests
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:14.1-alpine
+        env:
+          POSTGRES_DB: newsdb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 1234
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+    env:
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=newsdb;Username=postgres;Password=1234
+      
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -24,12 +42,31 @@ jobs:
         with:
           dotnet-version: '9.0.x' 
 
+      - name: Install EF CLI tools
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Add EF tools to PATH
+        run: echo "${HOME}/.dotnet/tools" >> $GITHUB_PATH
+
       - name: Restore dependencies
-        run: dotnet restore ReporterService.Tests
+        run: dotnet restore
 
-      - name: Build
-        run: dotnet build ReporterService.Tests --no-restore --configuration Release
+      - name: Build all projects
+        run: dotnet build --no-restore --configuration Release
 
+      - name: Wait for PostgreSQL to be healthy
+        run: |
+          for i in {1..20}; do
+            if pg_isready -h localhost -U postgres; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+      - name: Run EF migrations
+        run: dotnet ef database update 
+        
       - name: Run Tests
         run: dotnet test ReporterService.Tests --no-build --configuration Release --collect:"XPlat Code Coverage"
 
