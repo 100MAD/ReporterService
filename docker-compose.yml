@@ -14,6 +14,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+  redis:
+    image: redis:alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_CONNECTION_STRING=redis:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
 
   reporter-service:
     restart: on-failure
@@ -22,12 +35,14 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:80"
-    command: "dotnet ef database update"
     depends_on:
+      redis:
+          condition: service_started
       postgres:
         condition: service_healthy
     environment:
         ASPNETCORE_URLS: http://+:80
+        REDIS_CONNECTION_STRING: redis:6379
         POSTGRES_CONNECTION_STRING: Host=postgres;Port=5432;Database=newsdb;Username=postgres;Password=1234
 
   prometheus:

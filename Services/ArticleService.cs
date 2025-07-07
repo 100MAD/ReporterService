@@ -4,20 +4,44 @@ using Microsoft.EntityFrameworkCore;
 using ReporterService.Models;
 using ReporterService.Data;
 using Prometheus;
-
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace ReporterService.Services
 {
     public class ArticleService : IArticleService
     {
         private readonly AppDbContext _context;
+        private readonly IDistributedCache _cache;
 
-        public ArticleService(AppDbContext context) => _context = context;
+        public ArticleService(AppDbContext context, IDistributedCache cache)
+        {
+            _context = context;
+            _cache = cache;
+        }
 
-        public async Task<List<Article>> GetAllArticlesAsync() =>
-        await _context.Articles.Include(a => a.Reporter)
-            .OrderByDescending(a => a.PublishDate)
-            .ToListAsync();
+        public async Task<List<Article>> GetAllArticlesAsync()
+        {
+            var cacheKey = "all_articles";
+            var cached = await _cache.GetStringAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                MetricsRegistry.CacheHits.Inc();
+                return System.Text.Json.JsonSerializer.Deserialize<List<Article>>(cached)!;
+            }
+
+            var articles = await _context.Articles
+                .Include(a => a.Reporter)
+                .OrderByDescending(a => a.PublishDate)
+                .ToListAsync();
+
+            var serialized = System.Text.Json.JsonSerializer.Serialize(articles);
+            await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            });
+
+            return articles;
+        }
 
         public async Task<List<Article>> GetArticlesByCountryAndDateAsync(string country, DateTime date) =>
             await _context.Articles
@@ -26,12 +50,29 @@ namespace ReporterService.Services
             .ToListAsync();
         public async Task<List<Article>> GetRecentArticlesAsync(int days)
         {
+            var cacheKey = $"recent_articles_{days}";
+            var cached = await _cache.GetStringAsync(cacheKey);
+            if (!string.IsNullOrEmpty(cached))
+            {
+                MetricsRegistry.CacheHits.Inc();
+                return System.Text.Json.JsonSerializer.Deserialize<List<Article>>(cached)!;
+            }
+
             var threshold = DateTime.UtcNow.AddDays(-days).Date;
-            return await _context.Articles
+
+            var articles = await _context.Articles
                 .Where(a => a.PublishDate.Date >= threshold)
                 .Include(a => a.Reporter)
                 .OrderByDescending(a => a.PublishDate)
                 .ToListAsync();
+
+            var serialized = System.Text.Json.JsonSerializer.Serialize(articles);
+            await _cache.SetStringAsync(cacheKey, serialized, new DistributedCacheEntryOptions
+            {
+                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
+            });
+
+            return articles;
         }
 
         public async Task<List<(Reporter, int)>> GetTopReportersByArticleCountAsync(int year)
@@ -87,6 +128,8 @@ namespace ReporterService.Services
                 }
                 await _context.SaveChangesAsync();
             }
+            await _cache.RemoveAsync("all_articles");
+            await _cache.RemoveAsync($"recent_articles_1");
         }
     }
 }

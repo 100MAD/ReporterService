@@ -10,4 +10,5 @@ public static class MetricsRegistry
 
     public static readonly Histogram ImportDuration = Metrics
         .CreateHistogram("csv_import_duration_seconds", "Time taken to import articles from CSV");
+    public static readonly Counter CacheHits = Metrics.CreateCounter("total_cache_hits", "Total number of cache hits.");
 }

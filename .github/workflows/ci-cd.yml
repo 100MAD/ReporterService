@@ -23,14 +23,14 @@ jobs:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: 1234
         ports:
-          - 5432:5432
+          - 55432:5432
         options: >-
           --health-cmd="pg_isready -U postgres"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=5
     env:
-      ConnectionStrings__DefaultConnection: Host=localhost;Port=5432;Database=newsdb;Username=postgres;Password=1234
+      ConnectionStrings__DefaultConnection: Host=localhost;Port=55432;Database=newsdb;Username=postgres;Password=1234
       
 
     steps:
@@ -57,7 +57,7 @@ jobs:
       - name: Wait for PostgreSQL to be healthy
         run: |
           for i in {1..20}; do
-            if pg_isready -h localhost -U postgres; then
+            if pg_isready -h localhost --port=55432 -U postgres; then
               echo "PostgreSQL is ready"
               break
             fi

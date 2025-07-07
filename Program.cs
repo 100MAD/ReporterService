@@ -3,6 +3,8 @@ using ReporterService.Data;
 using ReporterService.Services;
 using Microsoft.OpenApi.Models;
 using Prometheus;
+using StackExchange.Redis;
+using Microsoft.Extensions.Caching.StackExchangeRedis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +20,14 @@ builder.Services.AddSwaggerGen();
 var connectionString = Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING")
     ?? builder.Configuration.GetConnectionString("DefaultConnection")
     ?? throw new InvalidOperationException("No PostgreSQL connection string found.");
-    
+
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetValue<string>("REDIS_CONNECTION_STRING")
+                            ?? Environment.GetEnvironmentVariable("REDIS_CONNECTION_STRING")
+                            ?? "localhost:6379"; 
+});
+
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(connectionString));
 
