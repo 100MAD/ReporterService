@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using ReporterService.Services;
 using ReporterService.Models;
-using ReporterService.Metrics;
 
 
 [ApiController]
@@ -45,7 +44,7 @@ public class ArticleController : ControllerBase
     public async Task<IActionResult> GetRecent([FromQuery] int days = 1)
     {
         var articles = await _service.GetRecentArticlesAsync(days);
-        var result = articles.Select(a => new 
+        var result = articles.Select(a => new
         {
             a.Title,
             a.Summary,
@@ -74,28 +73,5 @@ public class ArticleController : ControllerBase
         await _service.ImportFromCsvAsync(file);
         return Ok("Imported successfully.");
     }
-
-    [HttpGet("metrics")]
-    public async Task<IActionResult> GetMetrics()
-    {
-            var lines = new List<string>
-        {
-            "# HELP total_articles_created Total number of articles created.",
-            "# TYPE total_articles_created counter",
-            $"total_articles_created {AppMetrics.TotalArticlesCreated}",
-
-            "# HELP total_reporters_created Total number of reporters created.",
-            "# TYPE total_reporters_created counter",
-            $"total_reporters_created {AppMetrics.TotalReportersCreated}",
-
-            "# HELP TotalCsvImports Total number of CsvImports.",
-            "# TYPE TotalCsvImports counter",
-            $"TotalCsvImports {AppMetrics.TotalCsvImports}"
-        };
-
-        var content = string.Join("\n", lines) + "\n";
-        return Content(content, "text/plain");
-    }
-
-
+    
 }

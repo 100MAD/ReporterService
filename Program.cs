@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ReporterService.Data;
 using ReporterService.Services;
 using Microsoft.OpenApi.Models;
-
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,8 +28,14 @@ var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI();
+app.UseRouting();
 app.UseAuthorization();
-app.MapControllers();
+app.UseHttpMetrics();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapControllers();
+    endpoints.MapMetrics(); 
+});
 app.Run();
 
 public partial class Program { }
