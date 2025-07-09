@@ -1,0 +1,12 @@
+dotnet ef migrations add InitialCreate
+dotnet ef database update
+
+curl -X POST http://localhost:5194/api/article/import   -H "Content-Type: multipart/form-data" -F "file=@./data.csv"
+
+curl http://localhost:5194/api/article/all
+
+curl http://localhost:5194/api/article/recent
+
+curl http://localhost:5194/api/article/top-reporters?year=2025
+
+curl "http://localhost:5194/api/article/by-country-date?country=Russia&date=2025-04-19"

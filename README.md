@@ -32,7 +32,7 @@
 | GET    | `/api/article/recent?days=7`    | Get articles from the last 7 days          |
 | GET    | `/api/article/by-country-date`  | Get articles by `country` and `date`       |
 | GET    | `/api/article/topreporters`     | Get top reporters by article count         |
-| GET    | `/api/article/metrics`          | Prometheus metrics                         |
+| GET    | `metrics`          | Prometheus metrics                         |
 
 ---
 
